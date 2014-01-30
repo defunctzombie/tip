@@ -4,13 +4,13 @@
  */
 
 var Emitter = require('emitter');
-var events = require('events');
+var event = require('event');
 var query = require('query');
 var domify = require('domify');
 var classes = require('classes');
 var css = require('css');
 var html = domify(require('./template'));
-var offset = require('offset');
+var offset = require('offset-in-viewport');
 
 /**
  * Expose `Tip`.
@@ -58,12 +58,11 @@ function Tip(content, options) {
   this.classname = '';
   this.delay = options.delay || 300;
   this.el = html.cloneNode(true);
-  this.events = events(this.el, this);
-  this.winEvents = events(window, this);
   this.classes = classes(this.el);
   this.inner = query('.tip-inner', this.el);
   this.message(content);
   this.position('top');
+  this.bound_reposition = this.reposition.bind(this);
   if (Tip.effect) this.effect(Tip.effect);
 }
 
@@ -76,13 +75,19 @@ Emitter(Tip.prototype);
 /**
  * Set tip `content`.
  *
- * @param {String|jQuery|Element} content
+ * @param {String|Element} content
  * @return {Tip} self
  * @api public
  */
 
 Tip.prototype.message = function(content){
-  this.inner.innerHTML = content;
+  if (typeof content === 'string') {
+    this.inner.innerHTML = content;
+  }
+  else {
+    this.inner.appendChild(content);
+  }
+
   return this;
 };
 
@@ -98,9 +103,8 @@ Tip.prototype.message = function(content){
 Tip.prototype.attach = function(el){
   var self = this;
   this.target = el;
-  this.handleEvents = events(el, this);
-  this.handleEvents.bind('mouseover');
-  this.handleEvents.bind('mouseout');
+  event.bind(el, 'mouseover', self.onmouseover.bind(self));
+  event.bind(el, 'mouseout', self.onmouseout.bind(self));
   return this;
 };
 
@@ -138,8 +142,8 @@ Tip.prototype.onmouseout = function() {
  */
 
 Tip.prototype.cancelHideOnHover = function(){
-  this.events.bind('mouseover', 'cancelHide');
-  this.events.bind('mouseout', 'hide');
+  event.bind(this.el, 'mouseover', this.cancelHide.bind(this));
+  event.bind(this.el, 'mouseout', this.hide.bind(this));
   return this;
 };
 
@@ -220,9 +224,8 @@ Tip.prototype.show = function(el){
   this.reposition();
   this.emit('show', this.target);
 
-  this.winEvents.bind('resize', 'reposition');
-  this.winEvents.bind('scroll', 'reposition');
-
+  event.bind(window, 'resize', self.bound_reposition);
+  event.bind(window, 'scroll', self.bound_reposition);
   return this;
 };
 
@@ -379,6 +382,9 @@ Tip.prototype.cancelHide = function(){
 Tip.prototype.hide = function(ms){
   var self = this;
 
+  event.unbind(window, 'resize', self.bound_reposition);
+  event.unbind(window, 'scroll', self.bound_reposition);
+
   // duration
   if (ms) {
     this._hide = setTimeout(this.hide.bind(this), ms);
@@ -404,8 +410,6 @@ Tip.prototype.hide = function(ms){
  */
 
 Tip.prototype.remove = function(){
-  this.winEvents.unbind('resize', 'reposition');
-  this.winEvents.unbind('scroll', 'reposition');
   this.emit('hide');
 
   var parent = this.el.parentNode;
