@@ -7,9 +7,22 @@
     "component"
   ],
   "dependencies": {
-    "emitter-component": "1.0.0",
-    "jquery-component": "*"
+    "emitter-component": "1.1.1",
+    "event-component": "component/event#0.1.2",
+    "query-component": "0.0.1",
+    "domify": "1.1.1",
+    "classes-component": "1.1.3",
+    "css-component": "0.0.2",
+    "offset-in-viewport": "0.0.1"
   },
+  "browser": {
+    "query": "query-component",
+    "emitter": "emitter-component",
+    "classes": "classes-component",
+    "event": "event-component",
+    "css": "css-component"
+  },
+  "style": "./tip.css",
   "component": {
     "styles": [
       "tip.css"
